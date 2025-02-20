@@ -1,0 +1,38 @@
+#include<iostream>
+#include<cstdio>
+#include<algorithm>
+#include<cstring>
+#define N 1005
+  using namespace std;
+int n;
+int sum1[N] , dp[N][N];
+int main()
+{
+    memset(sum1 , 0 , sizeof(sum1));
+    memset(dp , 0x7f7f7f , sizeof(dp));
+    cin >> n;
+    for(int i = 1 ; i <= n ; i++)
+    {
+        int x;
+        cin >> x;
+        sum1[i] = sum1[i - 1] + x;
+        dp[i][i] = 0;  // 初始化，自己和自己合并时默认为0
+    }
+
+    // 区间dp三重循环模板1
+    for(int len = 2 ;  len <= n ; len++){  // 由小区间处理大区间
+        for(int i = 1 ; i <= n - len + 1 ; i++)  // 枚举小区间的起始端点
+            for(int k = i ; k < i + len - 1; k++)  // 枚举当前区间的断点，因为当前区间dp[i][i+len-1]可以由多个dp[i][k]+dp[k+1][i+len-1]得到
+                dp[i][i + len - 1] = min(dp[i][i + len - 1] , dp[i][k] + dp[k + 1][i + len - 1] + sum1[i + len - 1] - sum1[i - 1]);                
+    }
+
+    /* 区间dp三重循环模板2
+    for(int i = n - 1 ; i >= 1 ; i--)  // 由后往前枚举区间起点
+      for(int j = i + 1 ; j <= n ; j++)  // 由前往后枚举区间重点
+        for(int k = i ; k < j ; k++)  // 枚举区间断点
+          dp[i][j] = ……
+    */  
+
+    cout << dp[1][n];
+    return 0;
+}
