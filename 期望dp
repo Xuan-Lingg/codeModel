@@ -1,0 +1,61 @@
+/*
+期望dp的重点在于先进行拓扑排序，由入度为零的已确定期望的点推未确定期望的点.
+难点在于正序推和倒序推的区别.
+如果在确定终止状况时，逆序推容易：dp[x]= ∑(dp[y]+edge[i])/oud[x]，正序推较为复杂：dp[x]= ∑(dp[y]+edge[i] * g[i])/oud[x]（g[i]表示1到i的概率）
+原因：逆序时，i→n的概率和为1，1→i的概率和不为1
+详细推导请看：https://www.luogu.com.cn/article/alcjrs2m
+/*
+#include<iostream>
+#include<cstdio>
+#include<algorithm>
+#include<cstring>
+#include<queue>
+#define N 100005
+  using namespace std;
+
+int n , m , tot = 0;
+int head[N * 2] , sumInDegree[N] , sumEdge[N];
+double dp[N] , g[N] , sumP[N];
+queue<int>q;
+struct data1{
+    int to , next , val;
+} e[2 * N];
+
+void add_edge(int x , int y , int z){
+    e[++tot].to = y;
+    e[tot].next = head[x];
+    e[tot].val = z;
+    head[x] = tot;
+    sumEdge[x] ++;
+    sumInDegree[y] ++;
+}
+
+int main()
+{
+    memset(g , 0 , sizeof(g));
+    cin >> n >> m;
+    for(int i = 1 ; i <= m ; i++)
+    {
+        int x , y , z;
+        cin >> x >> y >> z;
+        add_edge(x , y , z);  // 此模板用正序推
+    }
+    q.push(1);
+    g[1] = double(1.00);
+    sumP[1] = 1;
+    while(!q.empty()){  // 拓扑排序，直到所有节点都处理完为止
+        int now_loc = q.front();
+        q.pop();
+        dp[now_loc] /= sumP[now_loc];
+        for(int i = head[now_loc] ; i != 0 ; i = e[i].next){
+            if(--sumInDegree[e[i].to] == 0) q.push(e[i].to);  // 更新入度，并将新入度为0的点压入队列
+            dp[e[i].to] += (dp[now_loc] + e[i].val) * g[now_loc] / sumEdge[now_loc];
+            sumP[e[i].to] += g[now_loc] / sumEdge[now_loc];
+            g[e[i].to] += g[now_loc] / sumEdge[now_loc];
+            
+        }
+
+    }
+    printf("%.2f" , dp[n]);
+    return 0;
+}
