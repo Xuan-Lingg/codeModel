@@ -1,0 +1,42 @@
+#include<iostream>
+#include<cstdio>
+#include<algorithm>
+#define N 20005
+#define M 100005
+using namespace std;
+int n, m, tot = 0, time1 = 0, ans1 = 0;
+int low[N], dfn[N], head[N], ans[N];
+struct edge { int to, next; }e[M * 2];
+void add_edge(int x, int y) { e[++tot].to = y; e[tot].next = head[x]; head[x] = tot; }
+void tarjan(int nowNode, int root)  // 判断割点时根节点与非根节点的判断方式不同
+{
+	int sum1 = 0;
+	low[nowNode] = dfn[nowNode] = ++time1;
+	for (int i = head[nowNode]; i != 0; i = e[i].next) {
+		int nextNode = e[i].to;
+		if (dfn[nextNode]) low[nowNode] = min(low[nowNode], dfn[nextNode]);
+		else {
+			tarjan(nextNode, 0, nowNode);
+			low[nowNode] = min(low[nowNode], low[nextNode]);
+			if (!root && low[nextNode] >= dfn[nowNode] && !ans[nowNode]) ans[nowNode] = 1, ans1++;  // 利用子树中low[nextNode] >= dfn[nowNode]的性质，判断nowNode结点有子树
+			else if(root) sum1++;  // 若nowNode结点不是根节点，则去除nowNode后nowNode的子树和nowNode父节点所在的强连通分量分割，nowNode为割点
+		}
+	}
+	if (sum1 >= 2 && root && !ans[nowNode]) ans[nowNode] = 1, ans1++;  // 若nowNode是根节点，则nowNode要有两棵子树，nowNode才为割点
+  // 不需要if(dfn[nowNode] == low[nowNode])的缩点操作
+}
+int main()
+{
+	cin >> n >> m;
+	for (int i = 1; i <= m; i++) {
+		int x, y;
+		cin >> x >> y;
+		add_edge(x, y), add_edge(y, x);
+	}
+	for (int i = 1; i <= n; i++)
+		if (!dfn[i]) tarjan(i, 1);
+	cout << ans1 << endl;
+	for (int i = 1; i <= n; i++)
+		if (ans[i]) cout << i << " ";
+	return 0;
+}
