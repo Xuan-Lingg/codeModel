@@ -1,0 +1,47 @@
+#include<iostream>
+#include<cstdio>
+#include<algorithm>
+#include<cstring>
+#define N 6005
+#define INF 0x5f5f5f
+  using namespace std;
+int a[N];
+int dp[N][2];
+int n , root , ans = -INF;
+bool f[N][N];
+void dfs(int now_loc){
+  dp[now_loc][1] = a[now_loc];
+  for(int i = 1 ; i <= n ; i++)
+    if(f[i][now_loc]){
+      dfs(i);  // 先处理完子节点，再处理当前结点
+      dp[now_loc][1] += max(dp[i][0] , 0);
+      dp[now_loc][0] += max(max(dp[i][1] , dp[i][0]) , 0);
+      ans = max(ans , max(dp[now_loc][1] , dp[now_loc][0]));  // 注意，有些树状dp的答案在子节点中，这种情况要边遍历边更新答案
+    }
+  
+}
+int main()
+{
+  memset(f , 0 , sizeof(f));
+  memset(dp , 0 , sizeof(dp));
+  cin >> n;
+  for(int i = 1 ; i <= n ; i++)
+    cin >> a[i];
+  for(int i = 1 ; i <n ; i++)
+  {
+    int x , y;
+    cin >> x >> y;
+    f[x][y] = 1;
+  }
+  for(int i = 1 ; i <= n ; i++)
+  {
+    bool f1 = 0;
+    for(int j = 1 ; j <= n ; j++)
+      if(f[i][j]) f1 = 1;
+    if(!f1) { root = i ; break;}
+  }  // 用邻接矩阵存树
+
+  dfs(root);  // 由根节点开始向下遍历
+  cout << ans;
+  return 0;
+}
