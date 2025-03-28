@@ -1,0 +1,72 @@
+#include<iostream>
+#include<cstdio>
+#include<algorithm>
+#include<queue>
+#define N 200005  // 两倍
+  using namespace std;
+int n , k , tot1 = 0;
+int max1 = 0 , node1 , node2 , root;
+int head[N];
+priority_queue<int , vector<int> , less<int> >q;
+struct edge{ int to , next; }e[N];
+void add_edge(int x , int y){ e[++tot1].to = y , e[tot1].next = head[x] , head[x] = tot1; }
+void dfs1(int nowNode , int depth , int pre){
+    if(depth > max1) max1 = depth , node1 = nowNode;
+    for(int i = head[nowNode] ; i != 0 ; i = e[i].next){
+        int nextNode = e[i].to;
+        if(nextNode == pre) continue;
+        dfs1(nextNode , depth + 1 , nowNode);
+    }
+}
+bool dfs2(int nowNode , int depth , int pre){
+    bool t1 = 0;
+    for(int i = head[nowNode] ; i != 0 ; i = e[i].next){
+        int nextNode = e[i].to;
+        if(nextNode == pre) continue;
+        bool t2 = 0;
+        t2 = dfs2(nextNode , depth + 1 , nowNode);  // 判断是否为目前的直径
+        if(t2) t1 = 1;
+    }
+    if(depth > max1){max1 = depth; return 1;}
+    if(t1){  // 若是在目前直径上的点
+        if(depth == max1 / 2) root = nowNode;  // 长度为总长一半的点为中点（按deepseek说法，这样做不严谨，但洛谷上做对了）
+        return 1;  // 上一个点也应该是直径上的点
+    }
+    return 0;
+}
+int dfs(int nowNode , int pre){
+    int max1 = 1;
+    for(int i = head[nowNode] ; i != 0 ; i = e[i].next){
+        if(e[i].to == pre) continue;
+        max1 = max(max1 , dfs(e[i].to , nowNode) + 1);
+    }
+    q.push(max1);
+    return max1;
+}
+int main()
+{
+    cin >> n >> k;
+    for(int i = 1 ; i < n ; i++){
+        int x , y;
+        cin >> x >> y;
+        add_edge(x , y) , add_edge(y , x);
+    }
+
+    dfs1(1 , 0 , 1);
+    max1 = 0;
+    dfs2(node1 , 0 , 1);  // 利用两次dfs求树的中心
+    
+    dfs(root , root);
+    
+    //while(!q.empty()){cout << q.top() << " "; q.pop();}
+    for(int i = 1; i <= k ; i++) q.pop();
+    cout << q.top();
+
+    // 接下来要按照root的子节点的深度，从大到小依次删除
+    // 最后从根节点开始，核心城市间的距离为0，再重新dfs找最远？？
+
+    // 利用dp找中心需要学习
+    return 0;
+}
+
+#luogu P5536
