@@ -1,0 +1,68 @@
+// https://www.luogu.com.cn/problem/P9245
+
+#include<iostream>
+#include<cstdio>
+#include<algorithm>
+#define N 100005
+  using namespace std;
+int n , k;
+int tot1 = 0;
+int head[N] , depth[N] , a[N];
+int fa[N][20];
+long long sum1 = 0;
+long long dis[N];
+struct edge{ int dis , to , next; }e[N*2];
+void add_edge(int x , int y , int z){
+    e[++tot1].to = y , e[tot1].next = head[x] , head[x] = tot1 , e[tot1].dis = z;
+}
+void dfs(int nowNode , int pre){
+    depth[nowNode] = depth[pre] + 1;  // 结点的深度，用于求LCA
+    fa[nowNode][0] = pre;  
+    for(int i = 1 ; i <= 15 ; i++)
+        fa[nowNode][i] = fa[fa[nowNode][i - 1]][i - 1];  // 利用倍增思想更新fa，例：8步=4步前的4步
+    for(int i = head[nowNode] ; i != 0 ; i = e[i].next){
+        if(e[i].to == pre) continue;
+        dis[e[i].to] = dis[nowNode] + e[i].dis;  // 计算下一个结点带权后的深度，要与depth区分
+        dfs(e[i].to , nowNode);
+    }
+}
+int LCA(int x , int y){
+    if(depth[x] < depth[y]) swap(x , y);
+    for(int i = 15 ; i >= 0 ; i--)
+        if(depth[fa[x][i]] >= depth[y]) x = fa[x][i];  // 利用贪心的方法将找到x的与y同深度的祖宗结点
+    if(x == y) return x;  // y是x的祖宗，直接返y
+    for(int i = 15 ; i >= 0 ; i--){
+        if(fa[x][i] != fa[y][i])
+            x = fa[x][i] , y = fa[y][i];  // 一起向上找
+    }  // 利用贪心的方法，接近x , y相同的祖宗
+    return fa[x][0];  // 在利用贪心一起向上后，x与y有相同的父节点
+}
+int get_dis(int x , int y){
+    return dis[x] + dis[y] - 2 * dis[LCA(x , y)];  // 求两节点简单路径长度的公式
+}
+int main()
+{
+    cin >> n >> k;
+    for(int i = 1 ; i < n ; i++){
+        int x , y , z;
+        cin >> x >> y >> z;
+        add_edge(x , y , z) , add_edge(y , x , z);
+    }
+    for(int i = 1 ; i <= k ; i++) cin >> a[i];
+    
+    // 预处理
+    depth[1] = 1 , dis[1] = 0;
+    for(int i = head[1] ; i != 0 ; i = e[i].next){
+        dis[e[i].to] = e[i].dis;
+        dfs(e[i].to , 1);
+    }
+
+    for(int i = 1 ; i < k ; i++)
+        sum1 += get_dis(a[i] , a[i + 1]);
+    for(int i = 1 ; i <= k ; i++){
+        if(i == 1) cout << sum1 - get_dis(a[1] , a[2]) << " ";
+        else if(i != k) cout << sum1 - get_dis(a[i-1] , a[i]) - get_dis(a[i] , a[i+1]) + get_dis(a[i-1] , a[i+1])<< " ";
+        else cout << sum1 - get_dis(a[k - 1] , a[k]);
+    }
+    return 0;
+}
