@@ -1,6 +1,7 @@
 public class abc {
-    int x;
-    int y;
-    int z;  // 第二次修改
     abc(){}
+
+    public static void main(String[] args) {
+        System.out.println("Hello World 1");
+    }
 }
