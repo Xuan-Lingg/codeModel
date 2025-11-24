@@ -1,0 +1,136 @@
+-- ==========================================
+-- 1. 用户表 (Users)
+-- ==========================================
+CREATE TABLE users (
+    user_id BIGINT NOT NULL COMMENT '用户ID (13位, 主键)',
+    openid VARCHAR(64) NOT NULL COMMENT '微信OpenID (唯一)',
+    nickname VARCHAR(64) DEFAULT '' COMMENT '用户昵称',
+    avatar_url VARCHAR(255) DEFAULT '' COMMENT '头像链接',
+    signature VARCHAR(255) DEFAULT '' COMMENT '个性签名',
+    gender TINYINT DEFAULT 0 COMMENT '性别 (0:未知, 1:男, 2:女)',
+    region VARCHAR(100) DEFAULT '' COMMENT '地区',
+    status TINYINT DEFAULT 1 COMMENT '状态：1=自由(Active), 0=冻结(Frozen)',
+    register_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
+    last_active_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '最后活跃/登录时间',
+    
+    PRIMARY KEY (user_id),
+    UNIQUE KEY uk_openid (openid) -- 保证OpenID唯一
+) COMMENT='用户表' ENGINE=InnoDB;
+
+
+-- ==========================================
+-- 2. 管理员表 (Admins)
+-- ==========================================
+CREATE TABLE admins (
+    admin_id BIGINT NOT NULL COMMENT '管理员账号ID (10位)',
+    password_hash VARCHAR(255) NOT NULL COMMENT '管理员密码 (加密Hash值)',
+    
+    PRIMARY KEY (admin_id)
+) COMMENT='管理员表' ENGINE=InnoDB;
+
+
+-- ==========================================
+-- 3. 博客内容表 (Contents)
+-- ==========================================
+CREATE TABLE contents (
+    content_id BIGINT NOT NULL COMMENT '内容编号 (13位)',
+    user_id BIGINT NOT NULL COMMENT '发布账号ID (外键)',
+    publish_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '发布时间',
+    text_content TEXT COMMENT '文字内容',
+    
+    -- 快速筛选标记
+    has_text BOOLEAN DEFAULT FALSE COMMENT '是否包含文字',
+    has_image BOOLEAN DEFAULT FALSE COMMENT '是否包含图片',
+    has_video BOOLEAN DEFAULT FALSE COMMENT '是否包含视频',
+    
+    -- 统计字段 (读多写少优化)
+    stat_likes INT DEFAULT 0 COMMENT '点赞数',
+    stat_comments INT DEFAULT 0 COMMENT '评论数',
+    stat_views INT DEFAULT 0 COMMENT '浏览数',
+    
+    -- 导出/计算用字段
+    char_count INT DEFAULT 0 COMMENT '字符数',
+    size_text INT DEFAULT 0 COMMENT '文字内存大小(KB)',
+    size_media INT DEFAULT 0 COMMENT '附件内存大小(KB)',
+    size_total INT DEFAULT 0 COMMENT '总内存大小(KB)',
+    
+    PRIMARY KEY (content_id),
+    KEY idx_user_id (user_id), -- 索引：查询某用户的所有博客
+    KEY idx_publish_time (publish_time), -- 索引：按时间筛选
+    
+    CONSTRAINT fk_contents_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) COMMENT='博客内容表' ENGINE=InnoDB;
+
+
+-- ==========================================
+-- 4. 附件/媒体表 (Attachments)
+-- ==========================================
+CREATE TABLE attachments (
+    id BIGINT AUTO_INCREMENT COMMENT '内部自增ID',
+    content_id BIGINT NOT NULL COMMENT '关联内容编号 (外键)',
+    media_url VARCHAR(255) NOT NULL COMMENT '多媒体URL',
+    media_type VARCHAR(10) NOT NULL COMMENT '类型: IMAGE 或 VIDEO',
+    file_size INT DEFAULT 0 COMMENT '文件大小(KB)',
+    
+    PRIMARY KEY (id),
+    KEY idx_content_id (content_id),
+    
+    CONSTRAINT fk_attachments_content FOREIGN KEY (content_id) REFERENCES contents(content_id) ON DELETE CASCADE
+) COMMENT='附件媒体表' ENGINE=InnoDB;
+
+
+-- ==========================================
+-- 5. 标签表 (Tags)
+-- ==========================================
+CREATE TABLE tags (
+    tag_id INT NOT NULL COMMENT '标签ID',
+    tag_name VARCHAR(50) NOT NULL COMMENT '标签名称',
+    
+    PRIMARY KEY (tag_id)
+) COMMENT='标签表' ENGINE=InnoDB;
+
+
+-- ==========================================
+-- 6. 博客-标签关联表 (Content_Tags)
+-- ==========================================
+CREATE TABLE content_tags (
+    content_id BIGINT NOT NULL COMMENT '内容编号',
+    tag_id INT NOT NULL COMMENT '标签ID',
+    
+    PRIMARY KEY (content_id, tag_id), -- 联合主键
+    
+    CONSTRAINT fk_ct_content FOREIGN KEY (content_id) REFERENCES contents(content_id) ON DELETE CASCADE,
+    CONSTRAINT fk_ct_tag FOREIGN KEY (tag_id) REFERENCES tags(tag_id) ON DELETE CASCADE
+) COMMENT='博客-标签关联表' ENGINE=InnoDB;
+
+
+-- ==========================================
+-- 7. 评论表 (Comments)
+-- ==========================================
+CREATE TABLE comments (
+    content_id BIGINT NOT NULL COMMENT '关联内容编号',
+    user_id BIGINT NOT NULL COMMENT '评论用户ID',
+    comment_text VARCHAR(500) NOT NULL COMMENT '评论内容',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '评论时间',
+    
+    -- 由于没有唯一ID，建立联合索引加速查询
+    KEY idx_content_time (content_id, create_time),
+    
+    CONSTRAINT fk_comments_content FOREIGN KEY (content_id) REFERENCES contents(content_id) ON DELETE CASCADE,
+    CONSTRAINT fk_comments_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) COMMENT='评论表' ENGINE=InnoDB;
+
+
+-- ==========================================
+-- 8. 点赞记录表 (Likes)
+-- ==========================================
+CREATE TABLE likes (
+    content_id BIGINT NOT NULL COMMENT '被点赞内容编号',
+    user_id BIGINT NOT NULL COMMENT '点赞用户ID',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '点赞时间',
+    
+    PRIMARY KEY (content_id, user_id), -- 联合主键：确保一个用户对一条内容只能点赞一次
+    
+    CONSTRAINT fk_likes_content FOREIGN KEY (content_id) REFERENCES contents(content_id) ON DELETE CASCADE,
+    CONSTRAINT fk_likes_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) COMMENT='点赞记录表' ENGINE=InnoDB;
